@@ -1,21 +1,33 @@
 ﻿
 var interpretter = new Interpretter();
 int fooPtr = interpretter.AddString("foo");
-interpretter.AddMethod("Main", new int[]
+int add5Ptr = interpretter.AddString("Add5");
+int arg0Ptr = interpretter.AddString("arg0");
+interpretter.AddMethod("Main", 0, new int[]
 {
     (int)Instruction.PushI, 1,
     (int)Instruction.PushI, 2,
     (int)Instruction.Add,
-    (int)Instruction.Dup,
     (int)Instruction.Print,
+    // call
     (int)Instruction.MethodCall, fooPtr,
+    // call
+    (int)Instruction.PushI, 4, // arg 0
+    (int)Instruction.MethodCall, add5Ptr,
     (int)Instruction.Stop
 });
-interpretter.AddMethod("foo", new[] { 
-    (int)Instruction.PushI, 3, 
+interpretter.AddMethod("foo", 0, new[] {
+    (int)Instruction.PushI, 3,
     (int)Instruction.PushI, 5,
     (int)Instruction.Add,
     (int)Instruction.Print,
+    (int)Instruction.MethodReturn
+});
+interpretter.AddMethod("Add5", ], new[] {
+    (int)Instruction.PushI, 5,
+    (int)Instruction.Add,
+    (int)Instruction.Print,
+    (int)Instruction.Pop,
     (int)Instruction.MethodReturn
 });
 interpretter.Start();
@@ -24,6 +36,8 @@ interpretter.Start();
 public enum Instruction : int
 {
     PushI,
+    PushLocalVar,
+    Pop,
     Add,
     Dup,
     Print,
@@ -33,20 +47,27 @@ public enum Instruction : int
 }
 
 
+
+public record  MethodInfo(string Name, string[] parameterNames, int MemoryIndex);
+
+
 class Interpretter
 {
     int Ip = 0;
     int Sp = -1;
+    int Bp = 0;
 
     int codeIndex = 0;
     public int[] Stack = new int[100000];
+    //public List<MemoryCell> Data = new List<MemoryCell>();
     public int[] Mem = new int[100000];
     public int[] Code = new int[100000];
     public List<string> StringConstantPool = new List<string>();
-    Dictionary<string, int> Methods = new Dictionary<string, int>();
-    public void AddMethod(string name, int[] code)
+    Dictionary<string, MethodInfo> Methods = new Dictionary<string, MethodInfo>();
+    public void AddMethod(string name, string[] parameterNames, int[] code)
     {
-        Methods.Add(name, codeIndex);
+        Methods.Add(name, new MethodInfo(name, parameterNames, codeIndex));
+
         for (int i = 0; i < code.Length; i++)
         {
             Code[codeIndex] = code[i];
@@ -80,11 +101,12 @@ class Interpretter
 
     public void Start()
     {
-        Ip = Methods["Main"];
+        Ip = Methods["Main"].MemoryIndex;
 
         while (true)
         {
             Instruction instruction = (Instruction)Code[Ip];
+            Console.WriteLine($"* {instruction,-10} ip:{Ip,3} sp:{Sp,3} :: {string.Join(",",Stack.Take(5))}");
 
             switch (instruction)
             {
@@ -94,17 +116,22 @@ class Interpretter
                     Ip++;
                     break;
 
+                case Instruction.PushLocalVar:
+                    Ip++;
+                   ....find navn... 
+                    break;
+
                 case Instruction.Add:
                     if (Sp < 1) throw new Exception($"invalid Stack pointer {Sp}");
                     Stack[Sp - 1] = Stack[Sp] + Stack[Sp - 1];
-                    Sp--;
+                    DeStack();
                     Ip++;
                     break;
 
                 case Instruction.Print:
                     if (Sp < 0) throw new Exception($"invalid Stack pointer {Sp}");
                     Print(Stack[Sp]);
-                    Sp--;
+                    DeStack();
                     Ip++;
                     break;
 
@@ -121,17 +148,33 @@ class Interpretter
                 case Instruction.MethodCall:
                     Ip++;
                     var name = StringConstantPool[Code[Ip++]];
-                    Stack[++Sp] = Ip;
-                    Ip = Methods[name];
+
+                    for (int x = 0; x < Methods[name].NumberOfParameters; x++)
+                        Stack[Sp - x + 1] = Stack[Sp - x];
+                    Sp++;
+                    Stack[Sp-Methods[name].NumberOfParameters] = Ip;
+                    
+                    Ip = Methods[name].MemoryIndex;
                     break;
 
-
                 case Instruction.MethodReturn:
-                    Ip =Stack[Sp--] ;
+                    Ip =Stack[Sp];
+                    DeStack();
+                    break;
+
+                case Instruction.Pop:
+                    DeStack();
+                    Ip++;
                     break;
 
                 default:
                     throw new Exception($"Do not understand instruction {instruction}");
+            }
+
+            void DeStack()
+            {
+                Stack[Sp] = 0;
+                Sp--;
             }
         }
     }
