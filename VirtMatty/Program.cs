@@ -3,53 +3,70 @@ var interpretter = new Interpretter();
 int fooPtr = interpretter.AddString("foo");
 int add5Ptr = interpretter.AddString("Add5");
 int arg0Ptr = interpretter.AddString("arg0");
-interpretter.AddMethod("Main", 0, new int[]
+interpretter.AddMethod("Main", new string[0], new int[]
 {
-    (int)Instruction.PushI, 1,
-    (int)Instruction.PushI, 2,
-    (int)Instruction.Add,
-    (int)Instruction.Print,
+    Instruction.PushI, 1,
+    Instruction.PushI, 2,
+    Instruction.Add,
+    Instruction.Print,
     // call
-    (int)Instruction.MethodCall, fooPtr,
+    Instruction.MethodCall, fooPtr,
     // call
-    (int)Instruction.PushI, 4, // arg 0
-    (int)Instruction.MethodCall, add5Ptr,
-    (int)Instruction.Stop
+    Instruction.PushI, 4, // arg 0
+    Instruction.MethodCall, add5Ptr,
+    Instruction.Stop
 });
-interpretter.AddMethod("foo", 0, new[] {
-    (int)Instruction.PushI, 3,
-    (int)Instruction.PushI, 5,
-    (int)Instruction.Add,
-    (int)Instruction.Print,
-    (int)Instruction.MethodReturn
+interpretter.AddMethod("foo", new string[0], new[] {
+    Instruction.PushI, 3,
+    Instruction.PushI, 5,
+    Instruction.Add,
+    Instruction.Print,
+    Instruction.MethodReturn
 });
-interpretter.AddMethod("Add5", ], new[] {
-    (int)Instruction.PushI, 5,
-    (int)Instruction.Add,
-    (int)Instruction.Print,
-    (int)Instruction.Pop,
-    (int)Instruction.MethodReturn
+interpretter.AddMethod("Add5", new[] { "arg0" }, new[] {
+    Instruction.PushI, 5,
+    Instruction.PushLocalVar, arg0Ptr,
+    Instruction.Add,
+    Instruction.Print,
+    Instruction.Pop,
+    Instruction.MethodReturn
 });
 interpretter.Start();
 
 
-public enum Instruction : int
+public static class Instruction
 {
-    PushI,
-    PushLocalVar,
-    Pop,
-    Add,
-    Dup,
-    Print,
-    MethodCall,
-    MethodReturn,
-    Stop
+    public const int PushI = 0;
+    public const int PushLocalVar = 1;
+    public const int Pop = 2;
+    public const int Add = 4;
+    public const int Dup = 8;
+    public const int Print = 16;
+    public const int MethodCall = 32;
+    public const int MethodReturn = 64;
+    public const int Stop = 128;
+
+    public static string ToString(int instruction)
+    {
+        if (instruction == 0) return "PushI";
+        if (instruction == 1) return "PushLocalVar";
+        if (instruction == 2) return "Pop";
+        if (instruction == 4) return "Add";
+        if (instruction == 8) return "Dup";
+        if (instruction == 16) return "Print";
+        if (instruction == 32) return "MethodCall";
+        if (instruction == 64) return "MethodReturn";
+        if (instruction == 128) return "Stop";
+        throw new NotImplementedException($"instruction {instruction}");
+    }
 }
 
 
 
-public record  MethodInfo(string Name, string[] parameterNames, int MemoryIndex);
 
+public record MethodInfo(string Name, string[] ParameterNames, int MemoryIndex);
+
+public record StackFrame(MethodInfo method, int ip, int sp, int bp);
 
 class Interpretter
 {
@@ -59,6 +76,7 @@ class Interpretter
 
     int codeIndex = 0;
     public int[] Stack = new int[100000];
+    public Stack<StackFrame> frames = new Stack<StackFrame>();
     //public List<MemoryCell> Data = new List<MemoryCell>();
     public int[] Mem = new int[100000];
     public int[] Code = new int[100000];
@@ -77,14 +95,14 @@ class Interpretter
 
     public int AddString(string s)
     {
-        for (int i = 0; i <  StringConstantPool.Count; i++)
+        for (int i = 0; i < StringConstantPool.Count; i++)
         {
             if (StringConstantPool[i] == s)
                 return i;
         }
 
         StringConstantPool.Add(s);
-        return StringConstantPool.Count- 1;
+        return StringConstantPool.Count - 1;
     }
 
     public int GetString(string s)
@@ -105,8 +123,9 @@ class Interpretter
 
         while (true)
         {
-            Instruction instruction = (Instruction)Code[Ip];
-            Console.WriteLine($"* {instruction,-10} ip:{Ip,3} sp:{Sp,3} :: {string.Join(",",Stack.Take(5))}");
+            string name;
+            int instruction = Code[Ip];
+            Console.WriteLine($"* {Instruction.ToString(instruction),-10} ip:{Ip,3} sp:{Sp,3} :: {string.Join(",", Stack.Take(5))}");
 
             switch (instruction)
             {
@@ -118,7 +137,8 @@ class Interpretter
 
                 case Instruction.PushLocalVar:
                     Ip++;
-                   ....find navn... 
+                    name = StringConstantPool[Code[Ip]];
+                    Ip++;
                     break;
 
                 case Instruction.Add:
@@ -147,18 +167,14 @@ class Interpretter
 
                 case Instruction.MethodCall:
                     Ip++;
-                    var name = StringConstantPool[Code[Ip++]];
-
-                    for (int x = 0; x < Methods[name].NumberOfParameters; x++)
-                        Stack[Sp - x + 1] = Stack[Sp - x];
-                    Sp++;
-                    Stack[Sp-Methods[name].NumberOfParameters] = Ip;
-                    
+                    name = StringConstantPool[Code[Ip++]];
+                    MethodInfo method = Methods[name];
+                    frames.Push(new StackFrame(method, Ip, Sp, Sp - method.ParameterNames.Length));
                     Ip = Methods[name].MemoryIndex;
                     break;
 
                 case Instruction.MethodReturn:
-                    Ip =Stack[Sp];
+                    Ip = Stack[Sp];
                     DeStack();
                     break;
 
