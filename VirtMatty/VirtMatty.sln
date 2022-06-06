@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32519.379
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VirtMatty", "VirtMatty.csproj", "{50C739C2-4E98-40F5-8322-6A6A456D68C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VirtMatty", "VirtMatty.csproj", "{50C739C2-4E98-40F5-8322-6A6A456D68C7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VirtMattyTests", "..\VirtMattyTests\VirtMattyTests.csproj", "{1A9A5742-8724-4335-ABDE-721FCA8DF4AF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{50C739C2-4E98-40F5-8322-6A6A456D68C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{50C739C2-4E98-40F5-8322-6A6A456D68C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{50C739C2-4E98-40F5-8322-6A6A456D68C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A9A5742-8724-4335-ABDE-721FCA8DF4AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A9A5742-8724-4335-ABDE-721FCA8DF4AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A9A5742-8724-4335-ABDE-721FCA8DF4AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A9A5742-8724-4335-ABDE-721FCA8DF4AF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
