@@ -18,11 +18,11 @@ internal class AsmParser
                 return x.x[0].ToLower() switch
                 {
                     "pushi" => new[] { Instruction.PushI, int.Parse(x.x[1]) },
-                    "call" => new[] {Instruction.MethodCall, interpretter.GetString(x.x[1])},
+                    "call" => new[] {Instruction.Call, interpretter.GetString(x.x[1])},
                     "add" => new[] { Instruction.Add },
                     "print" => new[] { Instruction.Print },
                     "stop" => new[] { Instruction.Stop },
-                    "ret" => new[] { Instruction.MethodReturn },
+                    "ret" => new[] { Instruction.Return },
                     _ => throw new Exception($"Dont understand '{string.Join(" ", x.x)}'"),
                 };
             })

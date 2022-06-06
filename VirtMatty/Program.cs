@@ -12,14 +12,7 @@ call foo
 stop
 ")
 );
-interpretter.AddMethod("Main_new", new string[0], asm.Parse(@"
-pushi 1
-pushi 2
-add
-print
-stop
-")
-);
+
 interpretter.AddMethod("Main_old", new string[0], new int[]
 {
     Instruction.PushI, 1,
@@ -27,26 +20,25 @@ interpretter.AddMethod("Main_old", new string[0], new int[]
     Instruction.Add,
     Instruction.Print,
     // call
-    Instruction.MethodCall, fooPtr,
+    Instruction.Call, fooPtr,
     // call
     Instruction.PushI, 4, // arg 0
-    Instruction.MethodCall, add5Ptr,
+    Instruction.Call, add5Ptr,
     Instruction.Stop
 });
-interpretter.AddMethod("foo", new string[0], new[] {
-    Instruction.PushI, 3,
-    Instruction.PushI, 5,
-    Instruction.Add,
-    Instruction.Print,
-    Instruction.MethodReturn
-});
+interpretter.AddMethod("foo", new string[0], asm.Parse(@"
+pushi 3
+pushi 5
+add
+print
+ret
+"));
 interpretter.AddMethod("Add5", new[] { "arg0" }, new[] {
     Instruction.PushI, 5,
     Instruction.PushLocalVar, arg0Ptr,
     Instruction.Add,
     Instruction.Print,
-    Instruction.Pop,
-    Instruction.MethodReturn
+    Instruction.Return
 });
 interpretter.Start();
 
@@ -59,8 +51,8 @@ public static class Instruction
     public const int Add = 4;
     public const int Dup = 8;
     public const int Print = 16;
-    public const int MethodCall = 32;
-    public const int MethodReturn = 64;
+    public const int Call = 32;
+    public const int Return = 64;
     public const int Stop = 128;
 
     public static string ToString(int instruction)
@@ -179,7 +171,7 @@ class Interpretter
                     Console.WriteLine($"stack: {Sp} instP: {Ip}");
                     return;
 
-                case Instruction.MethodCall:
+                case Instruction.Call:
                     Ip++;
                     name = StringConstantPool[Code[Ip++]];
                     MethodInfo method = Methods[name];
@@ -187,7 +179,7 @@ class Interpretter
                     Ip = Methods[name].MemoryIndex;
                     break;
 
-                case Instruction.MethodReturn:
+                case Instruction.Return:
                     var frame = frames.Pop();
                     Ip = frame.ip;
                     Sp = frame.sp;
