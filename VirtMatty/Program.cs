@@ -1,9 +1,26 @@
-﻿
-var interpretter = new Interpretter();
+﻿var interpretter = new Interpretter();
+var asm= new AsmParser(interpretter);
 int fooPtr = interpretter.AddString("foo");
 int add5Ptr = interpretter.AddString("Add5");
 int arg0Ptr = interpretter.AddString("arg0");
-interpretter.AddMethod("Main", new string[0], new int[]
+interpretter.AddMethod("Main", new string[0], asm.Parse(@"
+pushi 1
+pushi 2
+add
+print
+call foo
+stop
+")
+);
+interpretter.AddMethod("Main_new", new string[0], asm.Parse(@"
+pushi 1
+pushi 2
+add
+print
+stop
+")
+);
+interpretter.AddMethod("Main_old", new string[0], new int[]
 {
     Instruction.PushI, 1,
     Instruction.PushI, 2,
@@ -54,14 +71,12 @@ public static class Instruction
         if (instruction == 4) return "Add";
         if (instruction == 8) return "Dup";
         if (instruction == 16) return "Print";
-        if (instruction == 32) return "MethodCall";
-        if (instruction == 64) return "MethodReturn";
+        if (instruction == 32) return "Call";
+        if (instruction == 64) return "Return";
         if (instruction == 128) return "Stop";
         throw new NotImplementedException($"instruction {instruction}");
     }
 }
-
-
 
 
 public record MethodInfo(string Name, string[] ParameterNames, int MemoryIndex);
@@ -77,7 +92,6 @@ class Interpretter
     int codeIndex = 0;
     public int[] Stack = new int[100000];
     public Stack<StackFrame> frames = new Stack<StackFrame>();
-    //public List<MemoryCell> Data = new List<MemoryCell>();
     public int[] Mem = new int[100000];
     public int[] Code = new int[100000];
     public List<string> StringConstantPool = new List<string>();
@@ -125,7 +139,7 @@ class Interpretter
         {
             string name;
             int instruction = Code[Ip];
-            Console.WriteLine($"* {Instruction.ToString(instruction),-10} ip:{Ip,3} sp:{Sp,3} :: {string.Join(",", Stack.Take(5))}");
+            Console.WriteLine($"* {Instruction.ToString(instruction),-10} ip:{Ip,3} sp:{Sp,3} :: {string.Join(",", Stack.Take(5))}   cs:{frames.Count,4}");
 
             switch (instruction)
             {
@@ -174,8 +188,10 @@ class Interpretter
                     break;
 
                 case Instruction.MethodReturn:
-                    Ip = Stack[Sp];
-                    DeStack();
+                    var frame = frames.Pop();
+                    Ip = frame.ip;
+                    Sp = frame.sp;
+                    DeStack(frame.method.ParameterNames.Length);
                     break;
 
                 case Instruction.Pop:
@@ -187,10 +203,14 @@ class Interpretter
                     throw new Exception($"Do not understand instruction {instruction}");
             }
 
-            void DeStack()
+            void DeStack(int times=1)
             {
-                Stack[Sp] = 0;
-                Sp--;
+                for (int i = 0; i < times; i++)
+                {
+                    Stack[Sp] = 0;
+                    Sp--;
+                }
+                if (Sp < -1) throw new Exception("Stack pointer below -1");
             }
         }
     }
